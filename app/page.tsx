@@ -1,122 +1,57 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type AuctionRow = {
-  code: string;
-  name: string;
-  tags: string[];
-  prev: string;
-  t915: string;
-  t920: string;
-  t925: string;
-  d920: string;
-  d925: string;
-  auction: string;
-  open: string;
-  amount: string;
-  ratio: string;
-  concept: string;
-};
-
-const indexes = [
-  ["上证指数", "3728.03", "+0.63%"],
-  ["深证成指", "11835.57", "+0.84%"],
-  ["创业板指", "2536.41", "+1.02%"],
-  ["科创50", "1098.85", "+1.14%"],
-  ["沪深300", "4373.92", "+0.89%"],
-  ["两市成交", "1256.38亿", "+8.45%"],
+type PageKey = "首页" | "竞价" | "整体情绪" | "ETF";
+const indexes = [["上证指数","3728.03","+0.63%"],["深证成指","11835.57","+0.84%"],["创业板指","2536.41","+1.02%"],["科创50","1098.85","+1.14%"],["沪深300","4373.92","+0.89%"],["两市成交","1256.38亿","+8.45%"]];
+const nav: PageKey[] = ["首页","竞价","整体情绪","ETF"];
+const auction = [
+ ["002625","光启技术","爆量 高开 高换手","4天3板","4426","6526","7542","+47.46%","+15.57%","+10.00%","7821","10.32","商业航天"],
+ ["000158","常山北明","爆量 高开","3天2板","11316","16612","19924","+46.82%","+19.96%","+9.99%","23621","7.82","华为概念"],
+ ["301236","软通动力","爆量 高开","3天4板","13642","17632","19876","+29.24%","+12.73%","+10.03%","20156","6.43","AI智能体"],
+ ["002651","利君股份","高开","首板","8862","12581","15781","+41.97%","+25.43%","+10.07%","17321","6.31","军工"],
+ ["000833","粤桂股份","爆量 高开","2天2板","3863","4302","5622","+11.36%","+30.68%","+10.05%","6121","11.73","磷化工"],
+ ["002229","鸿博股份","高开","首板","6720","7076","9056","+5.30%","+27.97%","+10.04%","8927","13.74","AI应用"]
 ];
-
-const auctionRows: AuctionRow[] = [
-  { code:"002625", name:"光启技术", tags:["爆量","高开","高换手"], prev:"涨停4天3板", t915:"4426", t920:"6526", t925:"7542", d920:"+47.46%", d925:"+15.57%", auction:"+10.00%", open:"+10.03%", amount:"7821", ratio:"10.32", concept:"商业航天 / 卫星互联网" },
-  { code:"000158", name:"常山北明", tags:["爆量","高开","高换手"], prev:"涨停3天2板", t915:"11316", t920:"16612", t925:"19924", d920:"+46.82%", d925:"+19.96%", auction:"+9.99%", open:"+9.98%", amount:"23621", ratio:"7.82", concept:"华为概念 / 算力" },
-  { code:"301236", name:"软通动力", tags:["爆量","高开"], prev:"涨停3天4板", t915:"13642", t920:"17632", t925:"19876", d920:"+29.24%", d925:"+12.73%", auction:"+10.03%", open:"+10.10%", amount:"20156", ratio:"6.43", concept:"AI智能体 / 华为" },
-  { code:"002651", name:"利君股份", tags:["高开"], prev:"首板", t915:"8862", t920:"12581", t925:"15781", d920:"+41.97%", d925:"+25.43%", auction:"+10.07%", open:"+9.97%", amount:"17321", ratio:"6.31", concept:"军工 / 航空装备" },
-  { code:"000833", name:"粤桂股份", tags:["爆量","高开"], prev:"涨停2天2板", t915:"3863", t920:"4302", t925:"5622", d920:"+11.36%", d925:"+30.68%", auction:"+10.05%", open:"+10.00%", amount:"6121", ratio:"11.73", concept:"磷化工 / 有机硅" },
-  { code:"002229", name:"鸿博股份", tags:["高开"], prev:"首板", t915:"6720", t920:"7076", t925:"9056", d920:"+5.30%", d925:"+27.97%", auction:"+10.04%", open:"+10.02%", amount:"8927", ratio:"13.74", concept:"AI应用 / 数据中心" },
-  { code:"002640", name:"跨境通", tags:["高开","高换手"], prev:"3连板", t915:"11072", t920:"10261", t925:"10519", d920:"-7.34%", d925:"+2.51%", auction:"+9.97%", open:"+9.69%", amount:"11734", ratio:"16.98", concept:"跨境电商" },
-  { code:"002131", name:"利欧股份", tags:["爆量","高开"], prev:"首板", t915:"7076", t920:"9109", t925:"13324", d920:"+28.73%", d925:"+46.24%", auction:"+10.00%", open:"+10.15%", amount:"14787", ratio:"12.17", concept:"AI营销 / AIGC" },
+const moodDays = [
+ ["08-19","25167.77亿","+4.5%","427","4885","7","106","52","1055","109.73亿","77.41亿","37","130","169","28.85%","-2.65%","-2.94%","-1.59%","-8.10%","0.26%","-5.98%","3","189.52亿"],
+ ["08-18","24079.20亿","+0.7%","2070","3149","18","14","153","37","61.25亿","2.62亿","80","6","14","25.93%","1.16%","0.96%","2.38%","0.28%","-2.35%","0.86%","4","0"],
+ ["08-17","23099.40亿","+11.4%","4226","984","21","2","274","11","101.63亿","5.07亿","106","1","5","12.40%","3.55%","3.10%","5.68%","5.93%","15.82%","0.53%","4","19.83亿"],
+ ["08-14","21455.14亿","-16.0%","2308","2872","20","16","128","44","84.27亿","5.51亿","63","14","6","31.40%","0.06%","-0.49%","-0.72%","-4.00%","-9.97%","-1.88%","5","9.59亿"]
 ];
-
-const boostRows = [
-  ["002625","光启技术","爆量 高开 高换手","+10.03%","4天3板","商业航天","1.8","安全","+10.03%","0.69亿","0.94亿","0.48亿","14578","0.94","0.03%"],
-  ["000158","常山北明","爆量 高开 高换手","+10.00%","3天2板","华为概念","1.8","安全","+9.99%","0.83亿","4.95亿","4.76亿","24150","0.83","0.20%"],
-  ["301236","软通动力","爆量 高开","+9.75%","3天4板","AI智能体","1.8","安全","+6.09%","0.73亿","0.71亿","0.66亿","12500","0.73","0.08%"],
-  ["002651","利君股份","高开","+9.14%","3天2板","军工","1.3","安全","+20.01%","0.55亿","0.11亿","0.10亿","6840","0.55","0.10%"],
-  ["000833","粤桂股份","爆量 高开","+5.48%","3天2板","磷化工","1.5","安全","+8.79%","0.13亿","0.42亿","0.40亿","35180","0.13","0.01%"],
-  ["002229","鸿博股份","高开","+8.25%","5天5板","AI应用","1.0","安全","+0.95%","0.17亿","0.74亿","0.66亿","86500","0.17","0.08%"],
+const leaders = [
+ ["000062","深圳华强","消费电子","199","52.62%","8连板","+10.05%","23.41%","8.72亿"],
+ ["002261","拓维信息","AI应用","215","84.15%","7连板","+10.01%","19.85%","7.54亿"],
+ ["300306","中际旭创","通信","181","77.96%","6连板","+19.99%","18.02%","6.31亿"],
+ ["002838","道恩股份","机器人","142","56.61%","5连板","+9.98%","21.11%","5.12亿"],
+ ["600111","北方稀土","稀土永磁","138","79.61%","4连板","+9.99%","15.98%","4.86亿"],
+ ["603019","中科曙光","算力","126","61.18%","4连板","+9.85%","17.62%","4.40亿"]
 ];
-
-const trendRows = [
-  ["爆量 高开 高换手","50.52%","5转","商业航天","强开"],
-  ["爆量 高开 高换手","545.81%","3转","华为概念","强开"],
-  ["爆量 高开","83.61%","13转","AI智能体","强开"],
-  ["高开","23.01%","1转","军工","强开"],
-  ["爆量 高开","270.71%","0转","磷化工","观察"],
-  ["高开","368.71%","0转","AI应用","观察"],
-  ["高开","117.91%","0转","跨境电商","观察"],
+const themes = [["农业","+2.14%","14275","32.9亿"],["芯片","0.00%","5761","-177.4亿"],["中报增长","-0.10%","4375","12.9亿"],["机器人概念","+0.02%","4365","18.1亿"],["通信","+0.22%","3735","-236.6亿"],["操作系统","+0.74%","2948","7.2亿"]];
+const etfs = [
+ ["SH.512870","杭州湾区ETF","+9.38%","0.34亿","+13.54%","9/10","+19.56%","16/30","+19.56%","16/60"],
+ ["SZ.159516","新能源车ETF","+1.05%","6.24亿","+12.26%","9/10","+17.42%","28/30","+12.33%","9/60"],
+ ["SH.513350","标普油气ETF","+1.23%","15.27亿","+11.75%","8/10","+16.37%","28/30","+23.78%","39/60"],
+ ["SZ.159362","港股医疗ETF","-0.62%","2.87亿","+9.57%","9/10","+18.12%","30/30","+33.64%","44/60"],
+ ["SZ.159030","粮食ETF华夏","-2.78%","0.68亿","+8.97%","3/10","+14.38%","27/30","+14.38%","27/60"],
+ ["SH.513620","港股医疗ETF博华","-0.63%","0.26亿","+8.94%","9/10","+17.20%","30/30","+32.01%","44/60"],
+ ["SZ.159587","粮食ETF广发","-2.67%","1.64亿","+8.77%","8/10","+15.01%","23/30","+15.01%","23/60"],
+ ["SZ.159698","粮食ETF","-2.72%","2.79亿","+8.76%","3/10","+13.81%","28/30","+13.81%","28/60"]
 ];
+const holdings = [["300308","中际旭创","9.65%","183.20","+10.00%","+21.21%","+41.77%","+62.37%","通信设备"],["603986","兆易创新","8.71%","126.50","+8.45%","+14.87%","+33.21%","+55.23%","半导体"],["688041","海光信息","6.92%","117.43","+9.31%","+17.33%","+36.48%","+64.53%","半导体"],["002371","北方华创","6.21%","392.20","+7.66%","+12.03%","+29.84%","+45.38%","半导体设备"],["600570","恒生电子","4.64%","33.42","+6.01%","+8.07%","+19.27%","+32.15%","软件开发"]];
+const candle = [22,25,24,27,31,30,35,39,44,42,50,58,70,62,60,56,53,49,45,41,37,32,29,31,35,39,43,47,52,58,63,69,74];
 
-const nav = ["首页","自选股","行情","板块","竞价","打板池","涨停复盘","市场情绪","数据中心","系统设置"];
+function Tone({v}:{v:string}){const neg=v.trim().startsWith("-");return <span className={neg?"neg":"pos"}>{v}</span>}
+function PanelHead({title,sub,action}:{title:string;sub?:string;action?:string}){return <div className="sectionHead"><div><b>{title}</b>{sub&&<span>{sub}</span>}</div>{action&&<small>{action}</small>}</div>}
+function IndexStrip(){return <section className="indexStrip">{indexes.map(x=><div className="indexCard" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><em>{x[2]}</em></div>)}<div className="indexCard compact"><span>涨停 / 跌停</span><b>68 / 12</b><em>情绪偏强</em></div><div className="indexCard compact"><span>上涨 / 下跌</span><b>3287 / 1869</b><em>中位数 +0.82%</em></div><div className="indexCard compact"><span>市场温度</span><b>68°C</b><em>热度较高</em></div></section>}
 
-function Tone({value}:{value:string}) {
-  const cls = value.startsWith("-") ? "neg" : value === "安全" ? "safe" : value.includes("观察") ? "muted" : "pos";
-  return <span className={cls}>{value}</span>;
-}
+function HomeView({go}:{go:(p:PageKey)=>void}){return <section className="page"><div className="heroGrid"><div className="panel hero"><PanelHead title="今日工作台" sub="V3 模块导航"/><h1>A股个人交易工作台</h1><p>当前为界面验证版。竞价、整体情绪、ETF 已拆成独立工作区，可在顶部随时切换。</p><div className="quickBtns"><button onClick={()=>go("竞价")}>进入竞价</button><button onClick={()=>go("整体情绪")}>查看整体情绪</button><button onClick={()=>go("ETF")}>进入 ETF</button></div></div><div className="panel"><PanelHead title="今日核心观察" sub="演示"/><div className="metricGrid"><div><b>68°C</b><span>市场温度</span></div><div><b className="pos">68</b><span>涨停</span></div><div><b>3</b><span>最高连板</span></div><div><b className="money">1256亿</b><span>开盘成交</span></div></div></div></div><div className="homeCards"><div className="panel"><PanelHead title="竞价信号"/><ul><li>09:20 后封单加强：光启技术、常山北明</li><li>爆量高开：软通动力、粤桂股份</li><li>重点题材：商业航天、AI、军工</li></ul></div><div className="panel"><PanelHead title="情绪信号"/><ul><li>上涨家数显著多于下跌家数</li><li>昨日涨停溢价仍处于强势区</li><li>红盘家数与量能同步改善</li></ul></div><div className="panel"><PanelHead title="ETF 信号"/><ul><li>10D 强势：杭州湾区ETF</li><li>30D 强势：黄金股ETF</li><li>60D 强势：创新药ETF天弘</li></ul></div></div></section>}
 
-export default function Home(){
-  const [clock,setClock]=useState("");
-  const [point,setPoint]=useState("09:25");
-  useEffect(()=>{const tick=()=>setClock(new Date().toLocaleTimeString("zh-CN",{hour12:false}));tick();const t=setInterval(tick,1000);return()=>clearInterval(t)},[]);
-  return <main className="terminal">
-    <header className="navBar">
-      <div className="brand"><span className="logo">A</span><b>A股看盘台 <em>V2.0</em></b></div>
-      <nav>{nav.map(n=><button key={n} className={n==="竞价"?"activeNav":""}>{n}</button>)}</nav>
-      <div className="clock"><strong>{clock}</strong><small>集合竞价中 · 自动刷新 5s</small></div>
-    </header>
+function AuctionView(){const [pt,setPt]=useState("09:25");return <section className="page"><div className="panel"><PanelHead title="竞价封单（多日）" sub="08-19 今日" action="09:15 → 09:20 → 09:25"/><div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>异动</th><th>昨日状态</th><th>09:15</th><th>09:20</th><th>09:25</th><th>20变化</th><th>25变化</th><th>竞价涨幅</th><th>竞价额</th><th>量比</th><th>概念</th></tr></thead><tbody>{auction.map((r,i)=><tr key={r[0]}><td>{i+1}</td><td>{r[0]}</td><td className="nameCell">{r[1]}</td><td><span className="reason">{r[2]}</span></td><td>{r[3]}</td><td>{r[4]}</td><td>{r[5]}</td><td>{r[6]}</td><td><Tone v={r[7]}/></td><td><Tone v={r[8]}/></td><td><Tone v={r[9]}/></td><td className="money">{r[10]}</td><td className="ratio">{r[11]}</td><td className="concept">{r[12]}</td></tr>)}</tbody></table></div></div><div className="panel"><div className="sectionHead"><div><b>竞价加强单</b><span>关键节点</span></div><div className="timeTabs">{["09:15","09:20","09:25"].map(x=><button key={x} onClick={()=>setPt(x)} className={pt===x?"on":""}>{x}</button>)}</div></div><div className="auctionCards">{auction.slice(0,4).map((r,i)=><div className="auctionCard" key={r[0]}><div><b>{r[1]}</b><span>{r[0]}</span></div><strong className="pos">{r[9]}</strong><p>{r[2]} · {r[12]}</p><small>{pt} 封单：{pt==="09:15"?r[4]:pt==="09:20"?r[5]:r[6]} 万</small></div>)}</div></div><div className="threeGrid"><div className="panel"><PanelHead title="竞价额 & 涨幅榜"/><MiniRank rows={auction.map(r=>[r[1],r[10]+"万",r[9]])}/></div><div className="panel"><PanelHead title="竞价趋势异动 V2"/><MiniRank rows={auction.map(r=>[r[1],r[2],r[8]])}/></div><div className="panel"><PanelHead title="竞价时间轴"/><div className="timeline"><div><time>09:15</time><b>初始封单 98.27亿</b><small>股票家数 3685</small></div><i>↓</i><div><time>09:20</time><b>封单金额 125.64亿</b><small className="pos">较15分 +27.37亿</small></div><i>↓</i><div><time>09:25</time><b>终盘封单 156.92亿</b><small className="pos">较20分 +31.28亿</small></div></div></div></div></section>}
+function MiniRank({rows}:{rows:string[][]}){return <div className="miniRank">{rows.slice(0,6).map((r,i)=><div key={i}><span>{i+1}</span><b>{r[0]}</b><em>{r[1]}</em><Tone v={r[2]}/></div>)}</div>}
 
-    <section className="indexStrip">
-      {indexes.map(x=><div className="indexCard" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><em>{x[2]}</em></div>)}
-      <div className="indexCard compact"><span>涨停</span><b>68</b><em>较昨日 +9</em></div>
-      <div className="indexCard compact"><span>上涨家数</span><b>3287</b><em>较昨日 +514</em></div>
-      <div className="indexCard compact"><span>市场温度</span><b>68°C</b><em>热度较高</em></div>
-    </section>
+function SentimentView(){const dist=[[">10%",29],["7~10%",23],["5~7%",14],["3~5%",43],["0~3%",318],["平盘",27],["-3~0%",1497],["-5~-3%",1417],["-7~-5%",916],["-10~-7%",801],["<-10%",254]];return <section className="page"><div className="sentTop"><div className="panel"><PanelHead title="整体情绪指标 V2" sub="近5日"/><div className="tableWrap"><table className="moodTable"><thead><tr>{["日期","总成交额","涨幅","涨停","跌停","大面","大肉","连板","晋级","涨停封单","跌停封单","炸板","回封","触板","昨日溢价","昨炸溢价","昨封溢价","昨连溢价","昨日高标","昨日首板","最高板","隔夜封单"].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{moodDays.map((r,i)=><tr key={i}>{r.map((v,j)=><td key={j} className={j===1?"money":j>2&&j<14?"heatCell":""}>{j>=14&&j<=20?<Tone v={v}/>:v}</td>)}</tr>)}</tbody></table></div></div><div className="panel breadth"><PanelHead title="全市场涨跌分布" sub="共5339只"/><div className="distBars">{dist.map(([n,v])=><div key={n}><span>{n}</span><i className={String(n).startsWith("-")||String(n).startsWith("<")?"g":"r"} style={{width:`${Math.max(4,Number(v)/15)}px`}}/><b>{v}</b></div>)}</div></div><div className="panel"><PanelHead title="六大 ETF DDE 净流入" sub="08-19"/><div className="dde">{[["全ETF","+1303.92亿",78],["上证50ETF","-168.43亿",20],["沪深300ETF","-643.56亿",54],["创业板ETF","-346.39亿",44],["科创50ETF","-132.02亿",28],["中证500ETF","-360.26亿",38]].map((x,i)=><div key={x[0]}><span>{x[0]}</span><b className={String(x[1]).startsWith("-")?"neg":"pos"}>{x[1]}</b><i><em style={{width:x[2]+"%"}}/></i></div>)}</div></div></div><div className="sentMid"><div className="panel leaders"><PanelHead title="前排龙头 V2" sub="10日偏离 / 30日偏离"/><div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>题材</th><th>10日偏离</th><th>30日偏离</th><th>连板</th><th>昨日涨停</th><th>今日涨幅</th><th>封单额</th></tr></thead><tbody>{leaders.map((r,i)=><tr key={r[0]}><td>{i+1}</td>{r.map((v,j)=><td key={j} className={j===1?"nameCell":j===2?"concept":j===8?"money":""}>{j>=3&&j<=7&&String(v).includes("%")?<Tone v={v}/>:v}</td>)}</tr>)}</tbody></table></div></div><div className="panel energy"><PanelHead title="全市场量能" sub="今日 vs 昨日"/><div className="energyChart"><svg viewBox="0 0 760 250" preserveAspectRatio="none"><polyline className="line yday" points="0,220 80,190 150,164 220,143 290,122 360,105 430,88 500,75 570,62 640,49 760,36"/><polyline className="line today" points="0,218 80,192 150,166 220,140 290,150 360,115 430,82 500,95 570,68 640,55 760,22"/>{[80,150,220,290,360,430,500,570,640,720].map((x,i)=><rect key={x} x={x} y={170-(i%4)*22} width="16" height={70+(i%4)*22} className="energyBar"/>)}</svg><div className="chartLegend"><span>● 今日量能</span><span>● 昨日量能</span><b>峰值约 1486亿</b></div></div></div><div className="panel"><PanelHead title="近期活跃题材"/><MiniRank rows={themes.map(r=>[r[0],r[2]+"只",r[1]])}/></div></div><div className="sentBottom"><div className="panel sectorEffect"><PanelHead title="全市场赚钱效应 V3" sub="红盘 / 绿盘 / 日内强弱"/><div className="effectBars">{[85,112,76,103,96,121,74,89,65,117,56,94].map((v,i)=><div key={i}><i className="red" style={{height:v+"px"}}/><i className="green" style={{height:(i%3)*18+20+"px"}}/></div>)}</div></div><div className="panel"><PanelHead title="概念列" sub="涨幅 / 强度 / 主力净流入"/><div className="themeList">{themes.map(r=><div key={r[0]}><b>{r[0]}</b><Tone v={r[1]}/><span>{r[2]}</span><em>{r[3]}</em></div>)}</div></div><div className="panel todayLimit"><PanelHead title="今日封升" sub="强势方向"/><div className="tableWrap"><table><thead><tr><th>#</th><th>名称</th><th>题材</th><th>连板</th><th>竞价</th><th>今开</th><th>今日</th></tr></thead><tbody>{leaders.map((r,i)=><tr key={r[0]}><td>{i+1}</td><td className="nameCell">{r[1]}</td><td className="concept">{r[2]}</td><td>{r[5]}</td><td><Tone v={r[6]}/></td><td><Tone v={r[7]}/></td><td><Tone v={r[7]}/></td></tr>)}</tbody></table></div></div></div></section>}
 
-    <section className="auctionPage">
-      <div className="panel widePanel">
-        <div className="sectionHead"><div><b>竞价封单（多日）</b><span>08-19（今日）</span></div><small>生成 18:00:50 · 刷新 20:21:51 · 间隔 5.0s</small></div>
-        <div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>标签</th><th>昨日状态</th><th>09:15</th><th>09:20</th><th>09:25</th><th>09:20变化</th><th>09:25变化</th><th>竞价涨幅</th><th>今开涨幅</th><th>竞价金额(万)</th><th>竞价量比</th><th>所属概念/行业</th></tr></thead><tbody>{auctionRows.map((r,i)=><tr key={r.code}><td>{i+1}</td><td>{r.code}</td><td className="nameCell">{r.name}</td><td>{r.tags.map(t=><span className="tag" key={t}>{t}</span>)}</td><td>{r.prev}</td><td>{r.t915}</td><td>{r.t920}</td><td>{r.t925}</td><td><Tone value={r.d920}/></td><td><Tone value={r.d925}/></td><td><Tone value={r.auction}/></td><td><Tone value={r.open}/></td><td className="money">{r.amount}</td><td className="ratio">{r.ratio}</td><td className="concept">{r.concept}</td></tr>)}</tbody></table></div>
-      </div>
+function ETFView(){const [selected,setSelected]=useState(0);const e=etfs[selected];const pts=useMemo(()=>candle.map((v,i)=>`${i*28+8},${185-v*1.65}`).join(" "),[]);return <section className="page"><div className="radar"><div className="panel radarCard"><b>10D</b><span>短冲视窗</span><h3>杭州湾区ETF</h3><strong className="pos">+13.54%</strong><small>多日均额 0.04亿 · 龙头特征</small></div><div className="panel radarCard"><b>30D</b><span>主升视窗</span><h3>黄金股ETF</h3><strong className="pos">+27.34%</strong><small>多日均额 9.25亿 · 强趋势</small></div><div className="panel radarCard"><b>60D</b><span>趋势视窗</span><h3>创新药ETF天弘</h3><strong className="pos">+39.31%</strong><small>多日均额 0.86亿 · 成龙化成</small></div></div><div className="etfMain"><div className="panel etfList"><PanelHead title="全市场主榜" sub="603 / 1631只" action="点击 ETF 切换右侧"/><div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>ETF名称</th><th>当日</th><th>成交额</th><th>10D涨幅</th><th>日数</th><th>30D涨幅</th><th>日数</th><th>60D涨幅</th><th>日数</th></tr></thead><tbody>{etfs.map((r,i)=><tr key={r[0]} onClick={()=>setSelected(i)} className={i===selected?"selectedRow":""}><td>{i+1}</td><td>{r[0]}</td><td className="nameCell">{r[1]}</td><td><Tone v={r[2]}/></td><td>{r[3]}</td><td><Tone v={r[4]}/></td><td>{r[5]}</td><td><Tone v={r[6]}/></td><td>{r[7]}</td><td><Tone v={r[8]}/></td><td>{r[9]}</td></tr>)}</tbody></table></div></div><div className="panel etfDetail"><PanelHead title={`${e[1]}  ${e[0]}`} sub={`${e[2]} · 1.644`} action="前复权日K · 演示"/><div className="periodCards"><div><b>10D</b><strong>{e[4]}</strong><small>{e[5]}交易日</small></div><div><b>30D</b><strong>{e[6]}</strong><small>{e[7]}交易日</small></div><div><b>60D</b><strong>{e[8]}</strong><small>{e[9]}交易日</small></div></div><div className="kchart"><svg viewBox="0 0 930 260" preserveAspectRatio="none"><polyline className="etfMa" points={pts}/>{candle.map((v,i)=>{const up=i%4!==0;const x=i*28+6,y=190-v*1.6,h=12+(i%5)*3;return <g key={i} className={up?"cUp":"cDown"}><line x1={x+5} y1={y-8} x2={x+5} y2={y+h+9}/><rect x={x} y={y} width="10" height={h}/></g>})}</svg></div><div className="tableWrap"><table className="holding"><thead><tr><th>#</th><th>代码</th><th>名称</th><th>权重</th><th>现价</th><th>涨跌</th><th>5日</th><th>10日</th><th>20日</th><th>行业</th></tr></thead><tbody>{holdings.map((r,i)=><tr key={r[0]}><td>{i+1}</td>{r.map((v,j)=><td key={j} className={j===1?"nameCell":j===8?"concept":""}>{j>=3&&j<=7&&String(v).includes("%")?<Tone v={v}/>:v}</td>)}</tr>)}</tbody></table></div></div></div><div className="etfBottom"><div className="panel"><PanelHead title="ETF 资金流向" sub="单日净流入"/><div className="fundBars">{[132,85,67,45,24].map((v,i)=><div key={i}><i style={{height:v+"px"}}/><b>+{v}.{i}亿</b><span>{["股票型","行业","主题","跨境","其他"][i]}</span></div>)}</div></div><div className="panel"><PanelHead title="ETF 热门主题"/><MiniRank rows={[["新能源车ETF","236.41亿","+1.05%"],["半导体ETF","201.56亿","+2.31%"],["创新药ETF","168.92亿","-1.01%"],["港股互联网ETF","145.78亿","-0.63%"],["黄金ETF","125.64亿","-2.78%"]]}/></div><div className="panel"><PanelHead title="ETF 份额变动"/><MiniRank rows={[["创新药ETF","+4.21亿份","+2.67%"],["新能源车ETF","+3.68亿份","+1.59%"],["港股互联网ETF","+2.95亿份","+1.32%"],["半导体ETF","+2.12亿份","+1.08%"],["黄金ETF","+1.87亿份","+0.94%"]]}/></div><div className="panel"><PanelHead title="ETF 指数跟踪误差"/><MiniRank rows={[["中证医疗ETF","实时","-0.28%"],["CSI创新药ETF","实时","-0.26%"],["中证白酒ETF","实时","-0.23%"],["港股通互联网ETF","实时","-0.21%"],["中证科技ETF","实时","-0.20%"]]}/></div><div className="panel filterPanel"><PanelHead title="ETF 快速筛选"/><label>类型<select><option>全部</option><option>股票型</option><option>行业型</option><option>主题型</option></select></label><label>日均成交额<select><option>1000万以上</option><option>1亿以上</option><option>5亿以上</option></select></label><button>应用筛选</button></div></div></section>}
 
-      <div className="panel widePanel">
-        <div className="sectionHead"><div><b>竞价加强单</b><span>2026-08-19</span></div><div className="timeTabs">{["09:15","09:20","09:25"].map(t=><button onClick={()=>setPoint(t)} className={point===t?"on":""} key={t}>{t}</button>)}</div></div>
-        <div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>异动原因</th><th>竞价涨幅</th><th>昨日状态</th><th>概念分析</th><th>竞总分</th><th>安全</th><th>今开</th><th>封单</th><th>昨封</th><th>今封</th><th>竞价金额(万)</th><th>竞价量比</th><th>竞价额占比</th></tr></thead><tbody>{boostRows.map((r,i)=><tr key={r[0]}><td>{i+1}</td><td>{r[0]}</td><td className="nameCell">{r[1]}</td><td><span className="reason">{r[2]}</span></td><td><Tone value={r[3]}/></td><td>{r[4]}</td><td className="concept">{r[5]}</td><td className="score">{r[6]}</td><td><Tone value={r[7]}/></td><td><Tone value={r[8]}/></td><td>{r[9]}</td><td>{r[10]}</td><td>{r[11]}</td><td className="money">{r[12]}</td><td className="ratio">{r[13]}</td><td>{r[14]}</td></tr>)}</tbody></table></div>
-      </div>
-
-      <div className="lowerGrid">
-        <div className="panel">
-          <div className="sectionHead"><div><b>竞价额 & 竞价涨幅榜</b><span>今日涨停</span></div><small>按竞价金额排序</small></div>
-          <div className="tableWrap"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>竞价金额</th><th>量比</th><th>昨日成交</th><th>竞价占比</th><th>竞价涨幅</th><th>所属概念</th></tr></thead><tbody>{auctionRows.slice(0,6).map((r,i)=><tr key={r.code}><td>{i+1}</td><td>{r.code}</td><td className="nameCell">{r.name}</td><td className="money">{r.amount}</td><td className="ratio">{r.ratio}</td><td>{["12.5亿","11.8亿","8.7亿","6.4亿","9.1亿","7.5亿"][i]}</td><td>{["0.20%","0.15%","0.14%","0.10%","0.11%","0.09%"][i]}</td><td><Tone value={r.auction}/></td><td className="concept">{r.concept}</td></tr>)}</tbody></table></div>
-        </div>
-
-        <div className="panel trendPanel">
-          <div className="sectionHead"><div><b>竞价趋势异动股 V2</b><span>默认按异动强度排序</span></div><small>点列名可切换</small></div>
-          <div className="tableWrap"><table><thead><tr><th>#</th><th>异动原因</th><th>竞价涨幅</th><th>转强</th><th>昨日概念</th><th>信号</th></tr></thead><tbody>{trendRows.map((r,i)=><tr key={i}><td>{i+1}</td><td><span className="reason">{r[0]}</span></td><td><Tone value={r[1]}/></td><td>{r[2]}</td><td className="concept">{r[3]}</td><td><span className={r[4]==="强开"?"signal strong":"signal"}>{r[4]}</span></td></tr>)}</tbody></table></div>
-        </div>
-
-        <div className="panel timelinePanel">
-          <div className="sectionHead"><div><b>竞价时间轴</b><span>关键节点</span></div></div>
-          <div className="timeline">
-            <div><time>09:15</time><b>初始封单</b><p>封单总额 <strong>98.27亿</strong></p><p>股票家数 3685</p></div>
-            <i>↓</i>
-            <div><time>09:20</time><b>封单变化</b><p>封单总额 <strong>125.64亿</strong></p><p className="pos">变化 +27.37亿</p></div>
-            <i>↓</i>
-            <div><time>09:25</time><b>终盘封单</b><p>封单总额 <strong>156.92亿</strong></p><p className="pos">变化 +31.28亿</p></div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <footer>V2 竞价工作台原型 · 当前数据均为演示数据，仅用于确认布局与字段，不作为交易依据</footer>
-  </main>
-}
+export default function Home(){const [page,setPage]=useState<PageKey>("首页");const [clock,setClock]=useState("");useEffect(()=>{const f=()=>setClock(new Date().toLocaleTimeString("zh-CN",{hour12:false}));f();const t=setInterval(f,1000);return()=>clearInterval(t)},[]);return <main className="terminal"><header className="navBar"><div className="brand"><span className="logo">A</span><b>A股看盘台 <em>V3.0</em></b></div><nav>{nav.map(n=><button key={n} onClick={()=>setPage(n)} className={page===n?"activeNav":""}>{n}</button>)}</nav><div className="clock"><strong>{clock}</strong><small>演示数据 · 自动刷新</small></div></header><IndexStrip/>{page==="首页"&&<HomeView go={setPage}/>} {page==="竞价"&&<AuctionView/>} {page==="整体情绪"&&<SentimentView/>} {page==="ETF"&&<ETFView/>}<footer>V3 界面原型 · 当前行情与统计均为演示数据，不作为投资建议</footer></main>}
