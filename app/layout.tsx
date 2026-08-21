@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./sentiment-extra.css";
 import "./limit-ladder.css";
+import "./live-market.css";
 import SentimentExtras from "./SentimentExtras";
 import LadderPortal from "./LadderPortal";
 import LiveMarketBridge from "./LiveMarketBridge";
